@@ -32,6 +32,14 @@ class ChapterProgress(db.Model):
     progress = db.Column(db.Integer, nullable=False, default=0)
     __table_args__ = (db.UniqueConstraint('user_id', 'chapter_key', name='user_chapter_progress'),)
 
+class SubtopicProgress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    chapter_key = db.Column(db.String(180), nullable=False, index=True)
+    subtopic = db.Column(db.String(255), nullable=False)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    __table_args__ = (db.UniqueConstraint('user_id', 'chapter_key', 'subtopic', name='user_chapter_subtopic_progress'),)
+
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
@@ -90,8 +98,34 @@ def me():
 def syllabus():
     user_id = int(get_jwt_identity())
     saved = {item.chapter_key: item.progress for item in ChapterProgress.query.filter_by(user_id=user_id).all()}
-    chapters = [{**chapter, 'key': f"{chapter['subject']}|{chapter['grade']}|{chapter['title']}", 'progress': saved.get(f"{chapter['subject']}|{chapter['grade']}|{chapter['title']}", 0)} for chapter in flattened_syllabus()]
+    subtopic_records = SubtopicProgress.query.filter_by(user_id=user_id, completed=True).all()
+    completed_subtopics = {(item.chapter_key, item.subtopic) for item in subtopic_records}
+    chapters = []
+    for chapter in flattened_syllabus():
+        chapter_key = f"{chapter['subject']}|{chapter['grade']}|{chapter['title']}"
+        subtopics = [{'title': subtopic, 'completed': (chapter_key, subtopic) in completed_subtopics} for subtopic in chapter['subtopics']]
+        chapters.append({**chapter, 'key': chapter_key, 'subtopics': subtopics, 'progress': saved.get(chapter_key, 0)})
     return jsonify(chapters=chapters, total=len(chapters))
+
+@app.patch('/api/syllabus/<path:chapter_key>/subtopics')
+@jwt_required()
+def update_subtopic(chapter_key):
+    body = request.get_json(silent=True) or {}; subtopic = str(body.get('subtopic', '')).strip(); completed = body.get('completed')
+    chapter = next((item for item in flattened_syllabus() if f"{item['subject']}|{item['grade']}|{item['title']}" == chapter_key), None)
+    if not chapter: return jsonify(error='Chapter not found.'), 404
+    if subtopic not in chapter['subtopics']: return jsonify(error='Subtopic not found.'), 404
+    if not isinstance(completed, bool): return jsonify(error='Completed must be true or false.'), 400
+    user_id = int(get_jwt_identity()); record = SubtopicProgress.query.filter_by(user_id=user_id, chapter_key=chapter_key, subtopic=subtopic).first()
+    if not record: record = SubtopicProgress(user_id=user_id, chapter_key=chapter_key, subtopic=subtopic); db.session.add(record)
+    record.completed = completed
+    subtopic_total = len(chapter['subtopics'])
+    completed_count = sum(1 for title in chapter['subtopics'] if (title == subtopic and completed) or (title != subtopic and SubtopicProgress.query.filter_by(user_id=user_id, chapter_key=chapter_key, subtopic=title, completed=True).first()))
+    progress = round((completed_count / subtopic_total) * 100) if subtopic_total else 0
+    chapter_record = ChapterProgress.query.filter_by(user_id=user_id, chapter_key=chapter_key).first()
+    if not chapter_record: chapter_record = ChapterProgress(user_id=user_id, chapter_key=chapter_key); db.session.add(chapter_record)
+    chapter_record.progress = progress
+    db.session.commit()
+    return jsonify(subtopic={'title': subtopic, 'completed': record.completed}, progress=chapter_record.progress)
 
 @app.patch('/api/syllabus/<path:chapter_key>')
 @jwt_required()
@@ -101,7 +135,14 @@ def update_syllabus(chapter_key):
     if chapter_key not in {f"{c['subject']}|{c['grade']}|{c['title']}" for c in flattened_syllabus()}: return jsonify(error='Chapter not found.'), 404
     user_id = int(get_jwt_identity()); record = ChapterProgress.query.filter_by(user_id=user_id, chapter_key=chapter_key).first()
     if not record: record = ChapterProgress(user_id=user_id, chapter_key=chapter_key); db.session.add(record)
-    record.progress = progress; db.session.commit()
+    record.progress = progress
+    chapter = next(c for c in flattened_syllabus() if f"{c['subject']}|{c['grade']}|{c['title']}" == chapter_key)
+    if progress in {0, 100}:
+        for subtopic in chapter['subtopics']:
+            subtopic_record = SubtopicProgress.query.filter_by(user_id=user_id, chapter_key=chapter_key, subtopic=subtopic).first()
+            if not subtopic_record: subtopic_record = SubtopicProgress(user_id=user_id, chapter_key=chapter_key, subtopic=subtopic); db.session.add(subtopic_record)
+            subtopic_record.completed = progress == 100
+    db.session.commit()
     return jsonify(progress=record.progress)
 
 TASK_FIELDS = {'title', 'description', 'subject', 'chapter', 'priority', 'estimated_minutes', 'status', 'deadline', 'progress', 'tags', 'notes', 'category', 'recurrence'}
