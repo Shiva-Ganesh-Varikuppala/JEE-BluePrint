@@ -1,0 +1,11 @@
+/* Permanent dark theme overrides. This file intentionally contains no alternate light palette. */
+:root { color: #e9e7f1; background: #171722; }
+.app { background: #171722; }
+.dark main, .dark .app { background: #171722; }
+.auth-page { background: #171722; }
+.auth-form h2 { color: #f0edf7; }
+.auth-sub, .auth-switch { color: #aaa5b8; }
+.auth-form label { color: #cbc6d6; }
+.auth-form input { background: #242331; border-color: #3d3a4a; color: #f4f1fa; outline-color: #8b70ed; }
+.auth-switch button { color: #aa95ff; }
+.form-error { color: #fb8c8c; }

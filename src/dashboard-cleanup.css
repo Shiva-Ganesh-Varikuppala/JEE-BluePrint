@@ -1,0 +1,5 @@
+/* The dashboard now prioritizes daily tasks; detailed planning lives in its own sections. */
+.goal, .chart { display: none; }
+.top-grid { grid-template-columns: 1fr; }
+.bottom-grid { grid-template-columns: 1.2fr .8fr; }
+@media (max-width: 750px) { .bottom-grid { grid-template-columns: 1fr; } }
