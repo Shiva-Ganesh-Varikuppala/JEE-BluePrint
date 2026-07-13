@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
 import { request } from './Auth';
 
 type Subtopic = { title: string; completed: boolean };
