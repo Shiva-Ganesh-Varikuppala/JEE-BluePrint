@@ -24,7 +24,6 @@ app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", f"sqlite:///
 CORS(
     app,
     resources={r"/api/*": {"origins": "*"}},
-    supports_credentials=True,
 )
 db, jwt = SQLAlchemy(app), JWTManager(app)
 
