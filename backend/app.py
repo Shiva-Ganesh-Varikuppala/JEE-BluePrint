@@ -13,8 +13,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from syllabus import flattened_syllabus
 
 load_dotenv()
-app = Flask(__name__)
-app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL', 'sqlite:///jee_blueprint.db'), SQLALCHEMY_TRACK_MODIFICATIONS=False, JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'local-development-key-change-this-before-deploying'), JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=14))
+import tempfile
+
+app = Flask(
+    __name__,
+    instance_path=tempfile.gettempdir(),
+    instance_relative_config=False,
+)
+app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/jee_blueprint.db"), SQLALCHEMY_TRACK_MODIFICATIONS=False, JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'local-development-key-change-this-before-deploying'), JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=14))
 CORS(app, resources={r'/api/*': {'origins': os.getenv('FRONTEND_ORIGIN', 'http://localhost:5173')}})
 db, jwt = SQLAlchemy(app), JWTManager(app)
 
