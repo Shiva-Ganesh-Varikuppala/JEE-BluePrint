@@ -7,15 +7,31 @@ const P1_END = new Date(2026, 9, 14);
 const P2_END = new Date(2026, 10, 30);
 const P3_END = new Date(2026, 11, 20);
 
-const physics11 = ["Mathematical Tools", "Units & Measurements", "Motion in 1D", "Motion in 2D", "Newton's Laws of Motion", "Work, Energy & Power", "Centre of Mass & System of Particles", "Rotational Motion", "Gravitation", "Mechanical Properties of Solids", "Mechanical Properties of Fluids", "Thermal Properties of Matter", "Kinetic Theory of Gases", "Thermodynamics (11th)", "Oscillations", "Waves"];
-const physics12 = ["Electric Charges & Fields", "Electrostatic Potential & Capacitance", "Current Electricity", "Moving Charges & Magnetism", "Magnetism & Matter", "Electromagnetic Induction", "Alternating Current", "Electromagnetic Waves", "Ray Optics & Optical Instruments", "Wave Optics", "Dual Nature of Radiation & Matter", "Atoms", "Nuclei", "Semiconductor Electronics"];
-const chem11 = ["Some Basic Concepts of Chemistry", "Structure of Atom", "Classification of Elements & Periodicity", "Chemical Bonding & Molecular Structure", "States of Matter", "Thermodynamics (11th)", "Equilibrium", "Redox Reactions", "Hydrogen", "S-Block Elements", "P-Block Elements (11th)", "IUPAC Nomenclature", "Isomerism", "GOC", "Hydrocarbons", "Purification & Analysis of Organic Cmpds", "Environmental Chemistry"];
-const chem12 = ["Solutions", "Electrochemistry", "Chemical Kinetics", "d & f Block Elements", "Coordination Compounds", "Haloalkanes & Haloarenes", "Alcohols, Phenols & Ethers", "Aldehydes, Ketones & Carboxylic Acids", "Amines", "Biomolecules", "Polymers", "Chemistry in Everyday Life", "P-Block Elements (12th)", "The Solid State", "Salt Analysis"];
-const math11 = ["Sets", "Complex Numbers", "Quadratic Equations", "Permutations & Combinations", "Binomial Theorem", "Trigonometric Equations & Functions", "Properties of Triangles, Heights & Distances", "Circles", "Parabola", "Ellipse", "Hyperbola", "Straight Lines", "Statistics", "Sequence & Series"];
-const math12 = ["Basic Mathematics", "Determinants", "Matrices", "Relations & Functions", "Inverse Trigonometric Functions", "Limits, Continuity & Differentiability", "Method of Differentiation", "Applications of Derivatives", "Indefinite Integration", "Definite Integration", "Applications of Integrals", "Differential Equations", "Vector Algebra", "Three Dimensional Geometry", "Probability", "Linear Programming"];
-const physicsAll = physics11.concat(physics12);
-const chemAll = chem11.concat(chem12);
-const mathAll = math11.concat(math12);
+// ----- Real per-chapter status (from reported progress) -----
+const physicsCompleted = ["Mathematical Tools", "Units & Measurements", "Motion in 1D", "Motion in 2D", "Work, Energy & Power", "Gravitation", "Mechanical Properties of Solids", "Mechanical Properties of Fluids", "Electric Charges & Fields"];
+const physicsWeak = ["Electric Charges & Fields"];
+const physicsPartial = ["Newton's Laws of Motion", "Rotational Motion", "Kinetic Theory of Gases", "Thermal Properties of Matter", "Thermodynamics (11th)", "Oscillations", "Waves", "Electrostatic Potential & Capacitance"];
+const physicsNotStarted = ["Centre of Mass & System of Particles", "Current Electricity", "Moving Charges & Magnetism", "Magnetism & Matter", "Electromagnetic Induction", "Alternating Current", "Electromagnetic Waves", "Ray Optics & Optical Instruments", "Wave Optics", "Dual Nature of Radiation & Matter", "Atoms", "Nuclei", "Semiconductor Electronics"];
+const physicsQueue = physicsPartial.concat(physicsNotStarted);
+const physicsRevisionPool = physicsCompleted.concat(physicsWeak);
+
+const chemCompleted = ["Structure of Atom", "Some Basic Concepts of Chemistry", "Redox Reactions", "Chemical Bonding & Molecular Structure", "States of Matter", "Solutions", "Classification of Elements & Periodicity", "S-Block Elements", "IUPAC Nomenclature", "Isomerism", "GOC", "Hydrocarbons", "Purification & Analysis of Organic Cmpds"];
+const chemWeak = ["Classification of Elements & Periodicity", "Chemical Bonding & Molecular Structure"];
+const chemPartial = ["Haloalkanes & Haloarenes", "Alcohols, Phenols & Ethers", "Aldehydes, Ketones & Carboxylic Acids", "Amines", "Biomolecules", "Polymers", "Chemical Kinetics", "Electrochemistry", "Equilibrium", "Thermodynamics (11th)"];
+const chemNotStarted = ["Coordination Compounds", "d & f Block Elements", "P-Block Elements (11th)", "P-Block Elements (12th)", "Salt Analysis", "The Solid State", "Hydrogen", "Chemistry in Everyday Life", "Environmental Chemistry"];
+const chemQueue = chemPartial.concat(chemNotStarted);
+const chemRevisionPool = chemCompleted.concat(chemWeak);
+
+const mathCompleted = ["Basic Mathematics", "Determinants", "Matrices", "Relations & Functions", "Limits, Continuity & Differentiability", "Method of Differentiation", "Sets", "Straight Lines", "Trigonometric Equations & Functions", "Properties of Triangles, Heights & Distances"];
+const mathWeak = ["Matrices", "Determinants", "Relations & Functions", "Limits, Continuity & Differentiability", "Straight Lines"];
+const mathPartial = ["Quadratic Equations", "Complex Numbers", "Applications of Derivatives"];
+const mathNotStarted = ["Circles", "Parabola", "Ellipse", "Hyperbola", "Permutations & Combinations", "Binomial Theorem", "Sequence & Series", "Statistics", "Indefinite Integration", "Definite Integration", "Applications of Integrals", "Inverse Trigonometric Functions", "Differential Equations", "Vector Algebra", "Three Dimensional Geometry", "Probability", "Linear Programming"];
+const mathQueue = mathPartial.concat(mathNotStarted);
+const mathRevisionPool = mathCompleted.concat(mathWeak);
+
+const physicsAll = physicsCompleted.concat(physicsPartial, physicsNotStarted);
+const chemAll = chemCompleted.concat(chemPartial, chemNotStarted);
+const mathAll = mathCompleted.concat(mathPartial, mathNotStarted);
 
 const localDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -56,17 +72,22 @@ function planFor(date: Date): { phaseLabel: string; slots: Slot[] } {
       ];
     } else {
       const idx = countIndex(START, date, [0]);
-      const p12 = physics12[idx % physics12.length];
-      const c12 = chem12[idx % chem12.length];
-      const m12 = math12[idx % math12.length];
+      const revP = physicsRevisionPool[idx % physicsRevisionPool.length];
+      const revC = chemRevisionPool[idx % chemRevisionPool.length];
+      const revM = mathRevisionPool[idx % mathRevisionPool.length];
+      const pItem = physicsQueue[idx % physicsQueue.length];
+      const pLabel = (idx % physicsQueue.length) < physicsPartial.length ? 'Physics — finish & practice: ' : 'Physics — new topic: ';
+      const cItem = chemQueue[idx % chemQueue.length];
+      const cLabel = (idx % chemQueue.length) < chemPartial.length ? 'Chemistry — finish & practice: ' : 'Chemistry — new topic: ';
+      const mItem = mathQueue[idx % mathQueue.length];
+      const mLabel = (idx % mathQueue.length) < mathPartial.length ? 'Maths — finish & practice: ' : 'Maths — new topic: ';
       slots = [
-        mk('7:30 – 8:30 AM', 'rev', 'Morning revision', "Quick recall of yesterday's Physics, Chemistry & Maths"),
-        mk('9:30 AM – 12:45 PM', 'rev', '11th revision', 'Revise 11th-year Physics, Chemistry & Maths — rotate topics day to day'),
+        mk('7:30 – 8:30 AM', 'rev', 'Morning revision', `Physics: ${revP} · Chemistry: ${revC} · Maths: ${revM} (fast recall — marked 'completed' but need upkeep)`),
+        mk('9:30 AM – 12:45 PM', 'phy', pLabel + pItem, 'Physics gets the biggest block — weakest subject (3/10) with the largest backlog'),
         mk('6:00 – 8:30 PM', 'break', 'PW Lakshya live class', 'Attend scheduled class, take notes, solve in-class questions'),
         mk('8:50 – 10:00 PM', 'break', 'PW Lakshya class (contd.)', 'Finish class + solve assigned module questions'),
-        mk('10:00 – 11:00 PM', 'phy', '12th — new topic: ' + p12, 'Study lecture/notes + solve module problems'),
-        mk('11:00 PM – 12:00 AM', 'chem', '12th — new topic: ' + c12, 'Theory/reactions + practice questions'),
-        mk('12:00 – 1:00 AM', 'math', '12th — new topic: ' + m12, 'Theory + practice problems'),
+        mk('10:00 – 11:30 PM', 'chem', cLabel + cItem, 'Practice-heavy — align with what PW is currently teaching (12th organic)'),
+        mk('11:30 PM – 1:00 AM', 'math', mLabel + mItem, "Circles and conics first since that's where you're currently stuck"),
       ];
     }
   } else if (phase === 2) {
@@ -190,7 +211,7 @@ export default function PersonalTimetable() {
       <div>
         <p className="eyebrow">PERSONAL TIME TABLE · 14 JUL – 31 DEC 2026</p>
         <h1>Your chat-built 5-month plan</h1>
-        <p>Built around your actual PW Lakshya slots (6–8:30 PM &amp; 8:50–10 PM), a 95th-percentile target, and all 92 chapters. Select any date to see that day's plan — Sundays and holidays included.</p>
+        <p>Built around your actual progress: completed chapters get spaced revision, partial chapters get priority completion, and untouched chapters get full study slots — Physics first, since that's your weakest subject. Select any date to see that day's plan.</p>
       </div>
       <div className="planner-phase">
         <Target />
