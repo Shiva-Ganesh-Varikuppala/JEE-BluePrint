@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Bell, BookOpen, CalendarDays, Check, ChevronDown, Clock3, Flame, LayoutDashboard, Menu, MoreHorizontal, Plus, Settings, Sparkles, Target, TrendingUp, X, LogOut, Timer } from 'lucide-react';
+import { Bell, BookOpen, CalendarClock, CalendarDays, Check, ChevronDown, Clock3, Flame, LayoutDashboard, Menu, MoreHorizontal, Plus, Settings, Sparkles, Target, TrendingUp, X, LogOut, Timer } from 'lucide-react';
 import type { Account } from './Auth';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { activity, chapters, tasks as initialTasks } from './data';
 
 const trend = [{d:'M',v:2.2},{d:'T',v:3.6},{d:'W',v:2.8},{d:'T',v:4.8},{d:'F',v:3.9},{d:'S',v:5.7},{d:'S',v:4.6}];
-const nav = [[LayoutDashboard,'Overview'],[Check,'My Tasks'],[CalendarDays,'Planner'],[Timer,'Focus Tools'],[Sparkles,'AI Study Assistant'],[BookOpen,'Full Syllabus'],[Target,'Mock Tests']];
+const nav = [[LayoutDashboard,'Overview'],[Check,'My Tasks'],[CalendarDays,'Planner'],[Timer,'Focus Tools'],[Sparkles,'AI Study Assistant'],[BookOpen,'Full Syllabus'],[Target,'Mock Tests'],[CalendarClock,'Personal Time Table']];
 
 export default function App({ account, onLogout }: { account: Account; onLogout: () => void }){
  const [open,setOpen]=useState(false),[tasks,setTasks]=useState(initialTasks),[modal,setModal]=useState(false);
@@ -17,7 +17,8 @@ export default function App({ account, onLogout }: { account: Account; onLogout:
    <nav>{nav.map(([Icon,label],i)=><a className={i===0?'active':''} href="#" key={String(label)}><Icon size={19}/>{String(label)}</a>)}</nav><p className="nav-label">ORGANIZE</p><nav><a href="#"><Clock3 size={19}/>Revision queue <em>5</em></a><a href="#"><Sparkles size={19}/>Formula book</a><a href="#"><TrendingUp size={19}/>Analytics</a></nav>
    <div className="sidebar-bottom"><a href="#"><Settings size={19}/>Settings</a><button className="logout" onClick={onLogout}><LogOut size={18}/>Log out</button><div className="upgrade"><Sparkles size={17}/><b>Unlock your potential</b><small>Build a better study habit.</small><button>Explore Pro</button></div></div>
   </aside>
-  <main><header><button className="menu" onClick={()=>setOpen(true)}><Menu/></button><div className="crumb">Dashboard <span>/</span> Overview</div><div className="header-actions"><button className="icon notify"><Bell/><i/></button><button className="new-task" onClick={()=>setModal(true)}><Plus size={18}/>New task</button></div></header>
+  {!open && <button className="mobile-menu-toggle" onClick={()=>setOpen(true)} aria-label="Open menu"><Menu size={19}/></button>}
+  <main><header><div className="crumb">Dashboard <span>/</span> Overview</div><div className="header-actions"><button className="icon notify"><Bell/><i/></button><button className="new-task" onClick={()=>setModal(true)}><Plus size={18}/>New task</button></div></header>
    <section className="welcome"><div><p className="eyebrow">SUNDAY, 12 JULY</p><h1>Good morning, {account.name.split(' ')[0]} <span>✦</span></h1><p>Small steps today create big results tomorrow.</p></div><div className="countdown"><div><small>JEE MAIN 2026</small><b>180 <span>days to go</span></b></div><Target/></div></section>
    <section className="stats"><Stat icon={<Flame/>} label="Study streak" value="7 days" extra="Personal best: 12" color="orange"/><Stat icon={<Clock3/>} label="Focus time" value="3h 42m" extra="of 6h daily goal" color="blue"/><Stat icon={<Target/>} label="Today's progress" value={progress+'%'} extra="3 of 5 tasks done" color="violet"/><Stat icon={<TrendingUp/>} label="Overall readiness" value="68%" extra="↑ 4% this month" color="green"/></section>
    <section className="grid top-grid"><div className="card focus"><div className="card-title"><div><p className="eyebrow">TODAY'S FOCUS</p><h2>Your study plan</h2></div><button className="link">View planner <span>→</span></button></div><div className="task-list">{tasks.map((t,i)=><div className="task" key={t.title}><button aria-label="complete task" className={t.done===100?'check checked':'check'} onClick={()=>complete(i)}>{t.done===100&&<Check size={13}/>}</button><div className={'subject-dot '+t.tone}/><div className="task-copy"><b>{t.title}</b><small>{t.subject} · {t.time}</small></div><div className="task-progress"><span>{t.done}%</span><div><i style={{width:t.done+'%'}}/></div></div><button className="more"><MoreHorizontal/></button></div>)}</div><button className="add-inline" onClick={()=>setModal(true)}><Plus size={17}/> Add a task</button></div>

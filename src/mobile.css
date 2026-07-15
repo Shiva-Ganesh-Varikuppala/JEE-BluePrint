@@ -23,4 +23,10 @@ button, input, select, textarea { -webkit-appearance: none; }
   .strategy-bottom { margin-bottom: 60px; }
   .task-editor, .modal { padding: 20px; border-radius: 14px; }
   .task-editor input, .task-editor select, .task-editor textarea, .modal input, .modal select, .auth-form input { font-size: 16px; }
+  .mobile-menu-toggle { display: grid; place-items: center; position: fixed; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 4; width: 40px; height: 40px; background: #20202d; color: #fff; border: 1px solid #383548; border-radius: 10px; box-shadow: 0 8px 20px #0006; }
+  .mobile-menu-toggle svg { width: 19px; }
+}
+@media (max-width: 420px) {
+  .planner-heading h1, .strategy h1, .tasks-heading h1, .focus-heading h1, .ai-heading h1, .syllabus h1 { font-size: 24px; }
+  .planner-page, .strategy, .tasks-page, .focus-tools, .ai-tutor, .syllabus { padding-top: 26px; }
 }

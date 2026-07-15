@@ -1,6 +1,8 @@
 /* Dedicated section pages retain the app sidebar but hide the dashboard canvas. */
-body.route-focus .app, body.route-syllabus .app, body.route-ai .app { min-height: 0; }
-body.route-focus .app main, body.route-syllabus .app main, body.route-ai .app main { display: none; }
+body.route-focus .app, body.route-syllabus .app, body.route-ai .app, body.route-personal .app { min-height: 0; }
+body.route-focus .app main, body.route-syllabus .app main, body.route-ai .app main, body.route-personal .app main { display: none; }
 body.route-focus .focus-tools, body.route-syllabus .syllabus, body.route-ai .ai-tutor { min-height: 100dvh; padding-top: 48px; }
+body.route-personal .personal-timetable-page { min-height: 100dvh; padding-top: 48px; }
 body.route-focus .sidebar nav:first-of-type a:nth-child(4), body.route-ai .sidebar nav:first-of-type a:nth-child(5), body.route-syllabus .sidebar nav:first-of-type a:nth-child(6) { color: #fff; background: #383548; }
-@media (max-width: 750px) { body.route-focus .focus-tools, body.route-syllabus .syllabus, body.route-ai .ai-tutor { padding-top: 35px; } }
+body.route-personal .sidebar nav:first-of-type a:nth-child(8) { color: #fff; background: #383548; }
+@media (max-width: 750px) { body.route-focus .focus-tools, body.route-syllabus .syllabus, body.route-ai .ai-tutor { padding-top: 35px; } body.route-personal .personal-timetable-page { padding-top: 35px; } }
