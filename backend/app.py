@@ -21,7 +21,11 @@ app = Flask(
     instance_relative_config=False,
 )
 app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/jee_blueprint.db"), SQLALCHEMY_TRACK_MODIFICATIONS=False, JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'local-development-key-change-this-before-deploying'), JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=14))
-CORS(app, resources={r'/api/*': {'origins': os.getenv('FRONTEND_ORIGIN', 'http://localhost:5173')}})
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},
+    supports_credentials=True,
+)
 db, jwt = SQLAlchemy(app), JWTManager(app)
 
 class User(db.Model):
