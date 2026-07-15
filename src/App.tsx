@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Bell, BookOpen, CalendarClock, CalendarDays, Check, ChevronDown, ClipboardList, Clock3, Flame, LayoutDashboard, Menu, MoreHorizontal, Plus, Settings, Sparkles, Target, TrendingUp, X, LogOut, Timer } from 'lucide-react';
+import { Bell, BookOpen, CalendarClock, Check, ChevronDown, Clock3, Flame, LayoutDashboard, Menu, MoreHorizontal, Plus, Settings, Sparkles, Target, TrendingUp, X, LogOut, Timer } from 'lucide-react';
 import type { Account } from './Auth';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { activity, chapters, tasks as initialTasks } from './data';
 
 const trend = [{d:'M',v:2.2},{d:'T',v:3.6},{d:'W',v:2.8},{d:'T',v:4.8},{d:'F',v:3.9},{d:'S',v:5.7},{d:'S',v:4.6}];
-const nav = [[LayoutDashboard,'Overview'],[Check,'My Tasks'],[ClipboardList,'Planner'],[Target,'Mock Tests'],[CalendarDays,'Syllabus Calendar'],[Timer,'Focus Tools'],[Sparkles,'AI Study Assistant'],[BookOpen,'Full Syllabus'],[CalendarClock,'Personal Time Table']];
+const nav = [[LayoutDashboard,'Overview'],[Check,'My Tasks'],[Timer,'Focus Tools'],[Sparkles,'AI Study Assistant'],[BookOpen,'Full Syllabus'],[CalendarClock,'Personal Time Table']];
 
 export default function App({ account, onLogout }: { account: Account; onLogout: () => void }){
  const [open,setOpen]=useState(false),[tasks,setTasks]=useState(initialTasks),[modal,setModal]=useState(false);
