@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, ChevronLeft, ChevronRight, CircleCheck, Clock3, Target } from 'lucide-react';
+import { request } from './Auth';
 
 const START = new Date(2026, 6, 14);
 const END = new Date(2026, 11, 31);
@@ -7,31 +8,41 @@ const P1_END = new Date(2026, 9, 14);
 const P2_END = new Date(2026, 10, 30);
 const P3_END = new Date(2026, 11, 20);
 
-// ----- Real per-chapter status (from reported progress) -----
-const physicsCompleted = ["Mathematical Tools", "Units & Measurements", "Motion in 1D", "Motion in 2D", "Work, Energy & Power", "Gravitation", "Mechanical Properties of Solids", "Mechanical Properties of Fluids", "Electric Charges & Fields"];
-const physicsWeak = ["Electric Charges & Fields"];
-const physicsPartial = ["Newton's Laws of Motion", "Rotational Motion", "Kinetic Theory of Gases", "Thermal Properties of Matter", "Thermodynamics (11th)", "Oscillations", "Waves", "Electrostatic Potential & Capacitance"];
-const physicsNotStarted = ["Centre of Mass & System of Particles", "Current Electricity", "Moving Charges & Magnetism", "Magnetism & Matter", "Electromagnetic Induction", "Alternating Current", "Electromagnetic Waves", "Ray Optics & Optical Instruments", "Wave Optics", "Dual Nature of Radiation & Matter", "Atoms", "Nuclei", "Semiconductor Electronics"];
-const physicsQueue = physicsPartial.concat(physicsNotStarted);
-const physicsRevisionPool = physicsCompleted.concat(physicsWeak);
+type ApiChapter = { key: string; title: string; subject: string; grade: string; progress: number; subtopics: string[] };
+type SubjectQueues = { queue: string[]; partialLen: number; revisionPool: string[]; all: string[] };
 
-const chemCompleted = ["Structure of Atom", "Some Basic Concepts of Chemistry", "Redox Reactions", "Chemical Bonding & Molecular Structure", "States of Matter", "Solutions", "Classification of Elements & Periodicity", "S-Block Elements", "IUPAC Nomenclature", "Isomerism", "GOC", "Hydrocarbons", "Purification & Analysis of Organic Cmpds"];
-const chemWeak = ["Classification of Elements & Periodicity", "Chemical Bonding & Molecular Structure"];
-const chemPartial = ["Haloalkanes & Haloarenes", "Alcohols, Phenols & Ethers", "Aldehydes, Ketones & Carboxylic Acids", "Amines", "Biomolecules", "Polymers", "Chemical Kinetics", "Electrochemistry", "Equilibrium", "Thermodynamics (11th)"];
-const chemNotStarted = ["Coordination Compounds", "d & f Block Elements", "P-Block Elements (11th)", "P-Block Elements (12th)", "Salt Analysis", "The Solid State", "Hydrogen", "Chemistry in Everyday Life", "Environmental Chemistry"];
-const chemQueue = chemPartial.concat(chemNotStarted);
-const chemRevisionPool = chemCompleted.concat(chemWeak);
+// Fallback snapshot (used only if the live syllabus API can't be reached) — your reported status as of mid-July 2026.
+const fallbackPhysics = {
+  completed: ["Mathematical Tools", "Units & Measurements", "Motion in 1D", "Motion in 2D", "Work, Energy & Power", "Gravitation", "Mechanical Properties of Solids", "Mechanical Properties of Fluids", "Electric Charges & Fields"],
+  partial: ["Newton's Laws of Motion", "Rotational Motion", "Kinetic Theory of Gases", "Thermal Properties of Matter", "Thermodynamics (11th)", "Oscillations", "Waves", "Electrostatic Potential & Capacitance"],
+  notStarted: ["Centre of Mass & System of Particles", "Current Electricity", "Moving Charges & Magnetism", "Magnetism & Matter", "Electromagnetic Induction", "Alternating Current", "Electromagnetic Waves", "Ray Optics & Optical Instruments", "Wave Optics", "Dual Nature of Radiation & Matter", "Atoms", "Nuclei", "Semiconductor Electronics"],
+};
+const fallbackChem = {
+  completed: ["Structure of Atom", "Some Basic Concepts of Chemistry", "Redox Reactions", "Chemical Bonding & Molecular Structure", "States of Matter", "Solutions", "Classification of Elements & Periodicity", "S-Block Elements", "IUPAC Nomenclature", "Isomerism", "GOC", "Hydrocarbons", "Purification & Analysis of Organic Cmpds"],
+  partial: ["Haloalkanes & Haloarenes", "Alcohols, Phenols & Ethers", "Aldehydes, Ketones & Carboxylic Acids", "Amines", "Biomolecules", "Polymers", "Chemical Kinetics", "Electrochemistry", "Equilibrium", "Thermodynamics (11th)"],
+  notStarted: ["Coordination Compounds", "d & f Block Elements", "P-Block Elements (11th)", "P-Block Elements (12th)", "Salt Analysis", "The Solid State", "Hydrogen", "Chemistry in Everyday Life", "Environmental Chemistry"],
+};
+const fallbackMath = {
+  completed: ["Basic Mathematics", "Determinants", "Matrices", "Relations & Functions", "Limits, Continuity & Differentiability", "Method of Differentiation", "Sets", "Straight Lines", "Trigonometric Equations & Functions", "Properties of Triangles, Heights & Distances"],
+  partial: ["Quadratic Equations", "Complex Numbers", "Applications of Derivatives"],
+  notStarted: ["Circles", "Parabola", "Ellipse", "Hyperbola", "Permutations & Combinations", "Binomial Theorem", "Sequence & Series", "Statistics", "Indefinite Integration", "Definite Integration", "Applications of Integrals", "Inverse Trigonometric Functions", "Differential Equations", "Vector Algebra", "Three Dimensional Geometry", "Probability", "Linear Programming"],
+};
 
-const mathCompleted = ["Basic Mathematics", "Determinants", "Matrices", "Relations & Functions", "Limits, Continuity & Differentiability", "Method of Differentiation", "Sets", "Straight Lines", "Trigonometric Equations & Functions", "Properties of Triangles, Heights & Distances"];
-const mathWeak = ["Matrices", "Determinants", "Relations & Functions", "Limits, Continuity & Differentiability", "Straight Lines"];
-const mathPartial = ["Quadratic Equations", "Complex Numbers", "Applications of Derivatives"];
-const mathNotStarted = ["Circles", "Parabola", "Ellipse", "Hyperbola", "Permutations & Combinations", "Binomial Theorem", "Sequence & Series", "Statistics", "Indefinite Integration", "Definite Integration", "Applications of Integrals", "Inverse Trigonometric Functions", "Differential Equations", "Vector Algebra", "Three Dimensional Geometry", "Probability", "Linear Programming"];
-const mathQueue = mathPartial.concat(mathNotStarted);
-const mathRevisionPool = mathCompleted.concat(mathWeak);
-
-const physicsAll = physicsCompleted.concat(physicsPartial, physicsNotStarted);
-const chemAll = chemCompleted.concat(chemPartial, chemNotStarted);
-const mathAll = mathCompleted.concat(mathPartial, mathNotStarted);
+function bucket(chapters: ApiChapter[] | null, subject: string, fb: { completed: string[]; partial: string[]; notStarted: string[] }): SubjectQueues {
+  const subj = chapters ? chapters.filter(c => c.subject === subject) : [];
+  if (subj.length === 0) {
+    return { queue: fb.partial.concat(fb.notStarted), partialLen: fb.partial.length, revisionPool: fb.completed, all: fb.completed.concat(fb.partial, fb.notStarted) };
+  }
+  const completed = subj.filter(c => c.progress === 100).map(c => c.title);
+  const partial = subj.filter(c => c.progress > 0 && c.progress < 100).map(c => c.title);
+  const notStarted = subj.filter(c => c.progress === 0).map(c => c.title);
+  return {
+    queue: partial.concat(notStarted),
+    partialLen: partial.length,
+    revisionPool: completed.length ? completed : fb.completed,
+    all: completed.concat(partial, notStarted),
+  };
+}
 
 const localDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -52,8 +63,11 @@ function phaseOf(date: Date): 1 | 2 | 3 | 4 {
 
 type Slot = { time: string; cls: 'phy' | 'chem' | 'math' | 'rev' | 'break'; title: string; detail: string };
 const mk = (time: string, cls: Slot['cls'], title: string, detail: string): Slot => ({ time, cls, title, detail });
+const pick = (pool: string[], idx: number, empty: string) => pool.length ? pool[idx % pool.length] : empty;
 
-function planFor(date: Date): { phaseLabel: string; slots: Slot[] } {
+type Queues = { physics: SubjectQueues; chem: SubjectQueues; math: SubjectQueues };
+
+function planFor(date: Date, q: Queues): { phaseLabel: string; slots: Slot[] } {
   const dow = date.getDay();
   const phase = phaseOf(date);
   let slots: Slot[] = [];
@@ -72,22 +86,22 @@ function planFor(date: Date): { phaseLabel: string; slots: Slot[] } {
       ];
     } else {
       const idx = countIndex(START, date, [0]);
-      const revP = physicsRevisionPool[idx % physicsRevisionPool.length];
-      const revC = chemRevisionPool[idx % chemRevisionPool.length];
-      const revM = mathRevisionPool[idx % mathRevisionPool.length];
-      const pItem = physicsQueue[idx % physicsQueue.length];
-      const pLabel = (idx % physicsQueue.length) < physicsPartial.length ? 'Physics — finish & practice: ' : 'Physics — new topic: ';
-      const cItem = chemQueue[idx % chemQueue.length];
-      const cLabel = (idx % chemQueue.length) < chemPartial.length ? 'Chemistry — finish & practice: ' : 'Chemistry — new topic: ';
-      const mItem = mathQueue[idx % mathQueue.length];
-      const mLabel = (idx % mathQueue.length) < mathPartial.length ? 'Maths — finish & practice: ' : 'Maths — new topic: ';
+      const revP = pick(q.physics.revisionPool, idx, 'Free revision — pick any weak topic');
+      const revC = pick(q.chem.revisionPool, idx, 'Free revision — pick any weak topic');
+      const revM = pick(q.math.revisionPool, idx, 'Free revision — pick any weak topic');
+      const pItem = pick(q.physics.queue, idx, 'All chapters covered — extra practice / PYQs');
+      const pLabel = q.physics.queue.length && (idx % q.physics.queue.length) < q.physics.partialLen ? 'Physics — finish & practice: ' : 'Physics — new topic: ';
+      const cItem = pick(q.chem.queue, idx, 'All chapters covered — extra practice / PYQs');
+      const cLabel = q.chem.queue.length && (idx % q.chem.queue.length) < q.chem.partialLen ? 'Chemistry — finish & practice: ' : 'Chemistry — new topic: ';
+      const mItem = pick(q.math.queue, idx, 'All chapters covered — extra practice / PYQs');
+      const mLabel = q.math.queue.length && (idx % q.math.queue.length) < q.math.partialLen ? 'Maths — finish & practice: ' : 'Maths — new topic: ';
       slots = [
-        mk('7:30 – 8:30 AM', 'rev', 'Morning revision', `Physics: ${revP} · Chemistry: ${revC} · Maths: ${revM} (fast recall — marked 'completed' but need upkeep)`),
-        mk('9:30 AM – 12:45 PM', 'phy', pLabel + pItem, 'Physics gets the biggest block — weakest subject (3/10) with the largest backlog'),
+        mk('7:30 – 8:30 AM', 'rev', 'Morning revision', `Physics: ${revP} · Chemistry: ${revC} · Maths: ${revM} (fast recall of already-completed chapters)`),
+        mk('9:30 AM – 12:45 PM', 'phy', pLabel + pItem, 'Physics gets the biggest block — prioritized by your live completion status'),
         mk('6:00 – 8:30 PM', 'break', 'PW Lakshya live class', 'Attend scheduled class, take notes, solve in-class questions'),
         mk('8:50 – 10:00 PM', 'break', 'PW Lakshya class (contd.)', 'Finish class + solve assigned module questions'),
-        mk('10:00 – 11:30 PM', 'chem', cLabel + cItem, 'Practice-heavy — align with what PW is currently teaching (12th organic)'),
-        mk('11:30 PM – 1:00 AM', 'math', mLabel + mItem, "Circles and conics first since that's where you're currently stuck"),
+        mk('10:00 – 11:30 PM', 'chem', cLabel + cItem, 'Practice-heavy — pulled from your live syllabus progress'),
+        mk('11:30 PM – 1:00 AM', 'math', mLabel + mItem, 'Pulled from your live syllabus progress'),
       ];
     }
   } else if (phase === 2) {
@@ -112,9 +126,9 @@ function planFor(date: Date): { phaseLabel: string; slots: Slot[] } {
       ];
     } else {
       const idx = countIndex(P1_END, date, [0, 3]);
-      const p = physicsAll[idx % physicsAll.length];
-      const c = chemAll[idx % chemAll.length];
-      const m = mathAll[idx % mathAll.length];
+      const p = pick(q.physics.all, idx, 'Physics — mixed PYQs');
+      const c = pick(q.chem.all, idx, 'Chemistry — mixed PYQs');
+      const m = pick(q.math.all, idx, 'Maths — mixed PYQs');
       slots = [
         mk('7:30 – 8:30 AM', 'rev', 'Error log review', "Revisit yesterday's mistakes across all 3 subjects"),
         mk('9:30 AM – 12:45 PM', 'phy', 'Physics revision: ' + p, 'Revisit theory + solve ~25 PYQs on this topic'),
@@ -139,9 +153,9 @@ function planFor(date: Date): { phaseLabel: string; slots: Slot[] } {
       ];
     } else {
       phaseLabel += ' · Analysis + repair day';
-      const p = physicsAll[idx % physicsAll.length];
-      const c = chemAll[idx % chemAll.length];
-      const m = mathAll[idx % mathAll.length];
+      const p = pick(q.physics.all, idx, 'Physics — mixed PYQs');
+      const c = pick(q.chem.all, idx, 'Chemistry — mixed PYQs');
+      const m = pick(q.math.all, idx, 'Maths — mixed PYQs');
       slots = [
         mk('7:30 – 8:30 AM', 'rev', 'Error log revisit', "Yesterday's mock mistakes"),
         mk('9:30 AM – 12:45 PM', 'phy', 'Physics weak-topic repair: ' + p, 'Focused fix + practice'),
@@ -192,9 +206,23 @@ export default function PersonalTimetable() {
   const [selected, setSelected] = useState(today);
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [done, setDone] = useState<string[]>(() => JSON.parse(localStorage.getItem('personal-timetable-complete') || '[]'));
+  const [chapters, setChapters] = useState<ApiChapter[] | null>(null);
+  const [status, setStatus] = useState<'loading' | 'live' | 'fallback'>('loading');
+
+  useEffect(() => {
+    request('/syllabus')
+      .then(({ chapters }) => { setChapters(chapters); setStatus('live'); })
+      .catch(() => setStatus('fallback'));
+  }, []);
+
+  const queues: Queues = useMemo(() => ({
+    physics: bucket(chapters, 'Physics', fallbackPhysics),
+    chem: bucket(chapters, 'Chemistry', fallbackChem),
+    math: bucket(chapters, 'Mathematics', fallbackMath),
+  }), [chapters]);
 
   const phase = phaseOf(selected);
-  const schedule = planFor(selected);
+  const schedule = planFor(selected, queues);
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const offset = first.getDay();
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -211,7 +239,9 @@ export default function PersonalTimetable() {
       <div>
         <p className="eyebrow">PERSONAL TIME TABLE · 14 JUL – 31 DEC 2026</p>
         <h1>Your chat-built 5-month plan</h1>
-        <p>Built around your actual progress: completed chapters get spaced revision, partial chapters get priority completion, and untouched chapters get full study slots — Physics first, since that's your weakest subject. Select any date to see that day's plan.</p>
+        <p>Built around your live completion status from the Full Syllabus tracker: completed chapters get spaced revision, partial chapters get priority completion, and untouched chapters get full study slots — Physics first, since that's your weakest subject.</p>
+        {status === 'loading' && <p className="calendar-note" style={{ marginTop: 8 }}><i />Loading your live syllabus status…</p>}
+        {status === 'fallback' && <p className="calendar-note" style={{ marginTop: 8, color: '#e0a25f' }}><i />Couldn't reach the syllabus API — showing your last-known status instead. Check off chapters in Full Syllabus, or restart the backend, to sync this.</p>}
       </div>
       <div className="planner-phase">
         <Target />
@@ -262,7 +292,7 @@ export default function PersonalTimetable() {
 
     <div className="planner-principles">
       <article><Clock3 /><div><b>Fixed daily slots</b><span>7:30–8:30 AM, 9:30 AM–12:45 PM, 6–8:30 PM &amp; 8:50–10 PM (PW classes), 10 PM–1 AM.</span></div></article>
-      <article><CalendarClock /><div><b>Phase-based, not repeating</b><span>Syllabus completion → regular revision/mocks → intensive mocks → final taper.</span></div></article>
+      <article><CalendarClock /><div><b>Live-synced</b><span>Pulls chapter status straight from your Full Syllabus tracker — check something off there, see it here.</span></div></article>
       <article><Target /><div><b>No day skipped</b><span>Sundays and holidays are test/mock/analysis days, never rest days.</span></div></article>
     </div>
   </section>;
