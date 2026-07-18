@@ -20,12 +20,26 @@ app = Flask(
     instance_path=tempfile.gettempdir(),
     instance_relative_config=False,
 )
-app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/jee_blueprint.db"), SQLALCHEMY_TRACK_MODIFICATIONS=False, JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'local-development-key-change-this-before-deploying'), JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=14))
+app.config.update(SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", f"sqlite:///{tempfile.gettempdir()}/jee_blueprint.db"), SQLALCHEMY_TRACK_MODIFICATIONS=False, JWT_SECRET_KEY=os.getenv('JWT_SECRET_KEY', 'local-development-key-change-this-before-deploying'), JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=14), MAX_CONTENT_LENGTH=8 * 1024 * 1024)
+
+def allowed_origins():
+    # FRONTEND_ORIGIN can be a single origin or a comma-separated list. Falling back to "*"
+    # (rather than passing None straight through) avoids an invalid wildcard+credentials
+    # CORS combination, since we don't use cookies for auth anyway (JWT is sent via the
+    # Authorization header), so credentialed CORS was never actually required.
+    configured = os.getenv("FRONTEND_ORIGIN")
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+    return "*"
+
 CORS(
     app,
-    resources={r"/api/*": {"origins": os.getenv("FRONTEND_ORIGIN")}},
-    supports_credentials=True,
+    resources={r"/api/*": {"origins": allowed_origins()}},
 )
+
+@app.errorhandler(413)
+def too_large(_error):
+    return jsonify(error='Upload is too large. Images must be 8 MB or smaller.'), 413
 db, jwt = SQLAlchemy(app), JWTManager(app)
 
 class User(db.Model):
@@ -199,7 +213,7 @@ First identify the subject and chapter. Then write a concise step-by-step soluti
 @jwt_required()
 def solve_with_ai():
     api_key = os.getenv('GEMINI_API_KEY')
-    if not api_key: return jsonify(error='Gemini is not configured. Add GEMINI_API_KEY to backend/.env and restart the API.'), 503
+    if not api_key: return jsonify(error='Gemini is not configured. Set the GEMINI_API_KEY environment variable — in backend/.env locally, or in your hosting provider\'s dashboard (e.g. Vercel Project Settings → Environment Variables) in production — then restart or redeploy the API.'), 503
     image = request.files.get('image')
     question = request.form.get('question', '').strip()
     if not image and not question: return jsonify(error='Upload a question image or write a question.'), 400
