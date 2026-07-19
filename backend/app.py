@@ -3,7 +3,7 @@ import base64
 import json
 import urllib.error
 import urllib.request
-from datetime import timedelta
+from datetime import date, timedelta
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -62,6 +62,15 @@ class SubtopicProgress(db.Model):
     subtopic_key = db.Column(db.String(320), nullable=False)
     done = db.Column(db.Boolean, nullable=False, default=False)
     __table_args__ = (db.UniqueConstraint('user_id', 'subtopic_key', name='user_subtopic_progress'),)
+
+class ProgressSnapshot(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    date = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD, one row per user per day
+    percent = db.Column(db.Integer, nullable=False, default=0)
+    subtopics_done = db.Column(db.Integer, nullable=False, default=0)
+    subtopics_total = db.Column(db.Integer, nullable=False, default=0)
+    __table_args__ = (db.UniqueConstraint('user_id', 'date', name='user_progress_snapshot'),)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -128,7 +137,24 @@ def syllabus():
         total = len(subtopics_done)
         progress = round(100 * sum(subtopics_done) / total) if total else 0
         chapters.append({**chapter, 'key': chapter_key, 'subtopicsDone': subtopics_done, 'progress': progress})
+    total_subtopics = sum(len(c['subtopics']) for c in chapters)
+    done_count = sum(sum(c['subtopicsDone']) for c in chapters)
+    overall_percent = round(100 * done_count / total_subtopics) if total_subtopics else 0
+    today = date.today().isoformat()
+    snapshot = ProgressSnapshot.query.filter_by(user_id=user_id, date=today).first()
+    if not snapshot:
+        snapshot = ProgressSnapshot(user_id=user_id, date=today)
+        db.session.add(snapshot)
+    snapshot.percent, snapshot.subtopics_done, snapshot.subtopics_total = overall_percent, done_count, total_subtopics
+    db.session.commit()
     return jsonify(chapters=chapters, total=len(chapters))
+
+@app.get('/api/syllabus/history')
+@jwt_required()
+def syllabus_history():
+    user_id = int(get_jwt_identity())
+    snapshots = ProgressSnapshot.query.filter_by(user_id=user_id).order_by(ProgressSnapshot.date.asc()).all()
+    return jsonify(history=[{'date': s.date, 'percent': s.percent, 'subtopicsDone': s.subtopics_done, 'subtopicsTotal': s.subtopics_total} for s in snapshots])
 
 @app.patch('/api/syllabus/<path:chapter_key>')
 @jwt_required()

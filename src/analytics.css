@@ -1,0 +1,24 @@
+.analytics-page{background:#171722;color:#e9e7f1;padding:35px max(30px,calc((100vw - 1228px)/2)) 70px;margin-left:252px}
+.analytics-heading{border-top:1px solid #353440;padding-top:42px;margin-bottom:25px}
+.analytics-heading .eyebrow{margin:0 0 8px}
+.analytics-page h1{font:600 31px 'Playfair Display';margin:0;color:#f2eff9}
+.analytics-heading>div>p:not(.eyebrow){color:#aaa5b8;font-size:13px;margin:8px 0 0}
+.analytics-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.analytics-stat{background:#242331;border:1px solid #373542;border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px}
+.analytics-icon{width:34px;height:34px;border-radius:9px;background:#2f2c40;color:#b9a6ff;display:grid;place-items:center;flex-shrink:0}
+.analytics-stat small{display:block;font-size:10px;color:#9892a7;margin-bottom:3px}
+.analytics-stat b{font-size:19px;color:#f2eff9;font-weight:600}
+.analytics-stat b span{font-size:12px;color:#847fa0;font-weight:400}
+.analytics-stat b.positive{color:#7ee0a8}
+.analytics-stat b.negative{color:#e5867c}
+.analytics-chart-card{background:#242331;border:1px solid #373542;border-radius:12px;padding:18px}
+.analytics-chart-card .card-title{margin-bottom:10px}
+.analytics-graph{height:320px}
+@media(max-width:1050px){.analytics-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:750px){
+  .analytics-page{margin-left:0;padding:30px 18px 60px}
+  .analytics-heading{padding-top:30px}
+  .analytics-stats{grid-template-columns:1fr 1fr}
+  .analytics-graph{height:260px}
+}
+@media(max-width:420px){.analytics-page h1{font-size:24px}.analytics-page{padding-top:26px}}
