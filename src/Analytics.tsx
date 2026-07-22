@@ -67,8 +67,24 @@ export default function Analytics() {
               <CartesianGrid strokeDasharray="3 3" stroke="#2c2a38"/>
               <XAxis dataKey="label" stroke="#8f8a9e" fontSize={11} tickLine={false}/>
               <YAxis domain={[0, 100]} stroke="#8f8a9e" fontSize={11} tickLine={false} width={34} tickFormatter={v => `${v}%`}/>
-              <Tooltip contentStyle={{ background: '#201f2c', border: '1px solid #383548', borderRadius: 10, color: '#e9e7f1' }} formatter={(value: number) => [`${value}%`, 'Complete']}/>
-              <Line type="monotone" dataKey="percent" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3, fill: '#8b5cf6' }} activeDot={{ r: 5 }}/>
+<Tooltip
+  contentStyle={{
+    background: '#201f2c',
+    border: '1px solid #383548',
+    borderRadius: 10,
+    color: '#e9e7f1',
+  }}
+  formatter={(value) => [`${Number(value ?? 0)}%`, 'Complete']}
+/>
+
+<Line
+  type="monotone"
+  dataKey="percent"
+  stroke="#8b5cf6"
+  strokeWidth={3}
+  dot={{ r: 3, fill: '#8b5cf6' }}
+  activeDot={{ r: 5 }}
+/>              
             </LineChart>
           </ResponsiveContainer>
         </div>
